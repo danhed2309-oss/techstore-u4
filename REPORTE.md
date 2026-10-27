@@ -1,0 +1,16 @@
+# Reporte - Actividad 4 - TechStore
+
+## Preguntas del reporte 
+1. **¿Por qué Decimal y no float?** El float representa los decimales de forma binaria aproximada (0.1 + 0.2 no da exactamente 0.3). En dinero eso acumula errores de centavos; Decimal es exacto. Por eso `Money` rechaza cualquier monto que no sea Decimal.
+2. **¿Renglones o unidades?** Un renglón es un producto con su cantidad; las unidades son la suma de cantidades. O008 tiene 1 renglón pero 20 unidades. El límite de 20 se aplica a unidades.
+3. **¿Qué ventaja tiene encapsular una regla en Specification?** La regla tiene nombre, se prueba por separado, se reutiliza y se combina con `&`, `|` y `~` sin repetir `if` anidados en los servicios.
+4. **¿Por qué registrar eventos solo después de una transición válida?** Un evento anuncia un hecho que ya ocurrió. Si se emitiera antes de validar, otros sistemas (correo, inventario) reaccionarían a algo que nunca pasó.
+5. **¿Qué se reutiliza si se cambia FastAPI?** Todo `app/domain.py` y `app/specifications.py`, porque no dependen de ninguna librería web. Solo se reescribiría `app/api.py`.
+
+## Reflexión 
+Tres errores que encontraste, cómo los solucionaste y qué aprendiste:
+1. Usar float en lugar de Decimal en los precios. El código base valida con is_finite(), que solo existe en Decimal. Si alguien creaba Money(600.0), salía un error técnico (AttributeError) en vez de una excepción de dominio. Además, el float guarda los decimales de forma aproximada. Se solucionó validando primero que el monto sea Decimal. La prueba que lo demuestra es test_money_rechaza_float.
+2. Usar >= en lugar de > en el umbral de 500 MXN. El pedido O010 suma exactamente 500, y con >= el descuento se aplicaría cuando la regla dice “mayor a 500”. Lo evita MinimumAmountSpec, que usa >. Lo demuestran el escenario E09 y la prueba test_umbral_500_es_estricto.
+3. Registrar el evento antes de validar, o aceptar una confirmación doble. Si confirm() anota OrderConfirmed antes de comprobar el estado, una segunda confirmación fallaría pero dejaría un evento falso. El orden correcto es validar, cambiar el estado y registrar el evento al final.
+
+Qué aprendi: En esta actividad aprendí que las reglas de negocio deben vivir dentro del dominio y no en la API ni en la pantalla. Al implementar Order vi que cada operación debe validar primero, cambiar el estado después y registrar el evento al final, porque un evento solo puede anunciar algo que de verdad ocurrió. También entendí por qué se usa Decimal para el dinero y por qué los valores frontera, como el pedido de exactamente 500 MXN o el de 20 unidades, son donde más fácil se cometen errores. Usé IA para obtener un primer borrador, pero lo revisé y lo comprobé con pruebas: así detecté, por ejemplo, que Money fallaba con un float. Lo que más me ayudó fue que las pruebas me dijeron si una regla se cumplía, no que el programa arrancara. La próxima vez escribiría las pruebas de las transiciones inválidas desde el principio, antes de terminar el código.
